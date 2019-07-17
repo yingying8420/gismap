@@ -1,0 +1,40 @@
+@charset 'utf-8';
+
+#app {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+#left-slider {
+  background: #fff;
+  border: 1px solid #ddd;
+  position: absolute;
+  top: 10px;
+  left: 0;
+  width: 340px;
+  height: 500px;
+  z-index: 10;
+}
+
+#showSiler {
+  background: #fff;
+  position: absolute;
+  top: 50px;
+  left: 340px;
+  width: 30px;
+  height: 80px;
+  border: 1px solid #ddd;
+  border-left: none;
+  border-radius: 0 3px 3px 0px;
+  padding: 5px;
+}
+
+#showSiler:hover {
+  cursor: pointer;
+}
+.none{
+  display: none;
+}

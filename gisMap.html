@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <title>Gis地图查询</title>
+  <link rel="stylesheet" href="./css/gismap.css">
+  <link rel="stylesheet" href="./layui/css/layui.css">
+  <link rel="stylesheet" href="./arcgis_js_api/library/4.11/esri/themes/light/main.css" />
+
+  <!-- 引入样式 -->
+
+  <style>
+    html,
+    body,
+    #app {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+      background: rgb(0, 95, 150);
+    }
+
+    /* #topbar {
+      background: #fff;
+      padding: 10px;
+    } */
+
+    /* .action-button {
+      font-size: 16px;
+      background-color: transparent;
+      border: 1px solid #d3d3d3;
+      color: #6e6e6e;
+      height: 32px;
+      width: 32px;
+      text-align: center;
+      box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
+    } */
+
+    /* .action-button:hover,
+    .action-button:focus {
+      background: #636363;
+      color: #e4e4e4;
+    } */
+
+    /* .active {
+      background: #636363;
+      color: #e4e4e4;
+    } */
+  </style>
+  <!-- <script src="./js/vue.js"></script> -->
+  <!-- <script src="./js/axios.min.js"></script> -->
+  <!-- <script src="./js/index.js"></script> -->
+  <script src="./js/jquery.min.js"></script>
+  <script src="./layui/layui.all.js"></script>
+  <script src="./js/layui-xtree.js"></script>
+  <script src="./arcgis_js_api/library/4.11/init.js"></script>
+
+  <!-- <script>
+    var doQuery;
+    var doGl;
+    require([
+      "esri/Map",
+      "src/TiandiImageLayer",
+      "src/TiandiImageAnnoLayer",
+      "esri/views/SceneView",
+      "esri/layers/MapImageLayer",
+      "esri/layers/IntegratedMeshLayer",
+      "esri/layers/GraphicsLayer",
+      "esri/tasks/QueryTask",
+      "esri/tasks/support/Query",
+      "esri/widgets/DirectLineMeasurement3D",
+      "esri/widgets/AreaMeasurement3D"
+    ], function (
+      Map, TiandiImageLayer, TiandiImageAnnoLayer, SceneView, MapImageLayer, IntegratedMeshLayer, GraphicsLayer,
+      QueryTask, Query, DirectLineMeasurement3D, AreaMeasurement3D
+    ) {
+      var queryResult = {};
+      //新建影像图层
+      var TiandiImageLayer = new TiandiImageLayer();
+      //新建标注图层
+      var TiandiImageAnnoLayer = new TiandiImageAnnoLayer();
+
+      var layer = new MapImageLayer({
+        url: "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer"
+      });
+
+      /*permitsLayer，这个是这个链接：https://gis.gwpdi.com:6443/arcgis/rest/services/BaiGuan_TestTif/MapServer即那个项目区带状底图影像*/
+      var permitsLayer = new MapImageLayer({
+        url: "https://gis.gwpdi.com:6443/arcgis/rest/services/BaiGuan_TestTif/MapServer"
+      });
+      /*meshlayer，这个是这个链接：https://gis.gwpdi.com:6443/arcgis/rest/services/Hosted/fuba/SceneServer就是那个无人机三维模型*/
+      var meshlayer = new IntegratedMeshLayer({
+        url: "https://gis.gwpdi.com:6443/arcgis/rest/services/Hosted/fuba/SceneServer"
+      });
+
+      var activeWidget = null;
+
+      var resultsLayer = new GraphicsLayer();
+
+      var map = new Map({
+        layers: [TiandiImageLayer, TiandiImageAnnoLayer, permitsLayer, layer, meshlayer, resultsLayer],
+        ground: "world-elevation"
+      });
+
+      var view = new SceneView({
+        container: "app",
+        map: map,
+        center: [106.539749, 23.923348],
+        zoom: 14,
+        popup: {
+          dockEnabled: true,
+          dockOptions: {
+            position: "top-right",
+            breakpoint: false
+          }
+        }
+      });
+
+      // add the toolbar for the measurement widgets
+      view.ui.add("topbar", "top-right");
+      view.ui.move(['zoom', 'navigation-toggle', 'compass'], 'bottom-right');
+
+      view.when(function () {
+        view.ui.add("optionsDiv", "bottom-left");
+        document.getElementById("doGlBtn").addEventListener("click", doGl);
+      });
+
+      var peaksUrl_DLTB =
+        "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer/14";
+      var peaksUrl_FW =
+        "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer/12";
+      var peaksUrl_FS_D =
+        "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer/0";
+      var peaksUrl_FS_X =
+        "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer/3";
+      var qTask;
+
+      var params = new Query({
+        returnGeometry: true,
+        outFields: ["*"]
+      });
+
+      var highlightSelect;
+      /*
+        单击一条数据高亮
+        glCode:点击数据的mapCode
+      */
+      doGl = function (glCode) {
+        if (highlightSelect) {
+          highlightSelect.remove();
+        }
+
+        // the feature to be highlighted
+        var feature = queryResult[glCode];
+
+        // use the objectID to highlight the feature
+        view.whenLayerView(resultsLayer).then(function (layerView) {
+          highlightSelect = layerView.highlight(
+            feature
+          );
+        });
+
+        // center the feature
+        view.goTo({
+          target: feature.geometry,
+        });
+      }
+
+      /*
+        地图查询方法
+        fType:tab页签类型td(土地),fw(房屋),fs(附属)
+        sType:附属类型category字段,
+        queryStr:地图查询CODE集合，字符串'A','B','C'
+      */
+      doQuery = function (fType, sType, queryStr) {
+        // Clear the results from a previous query
+        resultsLayer.removeAll();
+        queryResult = {};
+        if (fType == "td") {
+          doQueryExt(peaksUrl_DLTB, queryStr);
+        } else if (fType == "fw") {
+          doQueryExt(peaksUrl_FW, queryStr);
+        } else {
+          doQueryExt(peaksUrl_FW, queryStr);
+          doQueryExt(peaksUrl_FS_X, queryStr);
+          doQueryExt(peaksUrl_FS_D, queryStr);
+        }
+      }
+
+      function doQueryExt(peaksUrl, queryStr) {
+        qTask = new QueryTask({
+          url: peaksUrl
+        });
+
+        params.where = "CODE IN (" + queryStr + ")";
+        // executes the query and calls getResults() once the promise is resolved
+        // promiseRejected() is called if the promise is rejected
+        qTask.execute(params)
+          .then(getResults)
+          .catch(promiseRejected);
+      }
+
+      var peakResults;
+      // Called each time the promise is resolved
+      function getResults(response) {
+
+        // Loop through each of the results and assign a symbol and PopupTemplate
+        // to each so they may be visualized on the map
+
+        peakResults = response.features.map(function (feature) {
+          feature.symbol = {
+            type: "simple-fill", // autocasts as new PointSymbol3D()
+            color: "#00FCFC",
+            outline: {
+              color: [128, 128, 128, 0.5],
+              width: "0.5px"
+            }
+          };
+          queryResult[feature.attributes.CODE] = feature;
+          //feature.popupTemplate = popupTemplate;
+          return feature;
+        });
+
+        resultsLayer.addMany(peakResults);
+        view.goTo(peakResults).then(function () {
+          /**view.popup.open({
+            features: peakResults,
+            featureMenuOpen: true,
+            updateLocationEnabled: true
+          });**/
+
+        });
+
+        // print the number of results returned to the user
+        // document.getElementById("printResults").innerHTML = "查询到" + peakResults.length +
+        //   "个记录！";
+      }
+
+      // Called each time the promise is rejected
+      function promiseRejected(error) {
+        console.error("错误信息: ", error.message);
+      }
+
+      document
+        .getElementById("distanceButton")
+        .addEventListener("click", function () {
+          setActiveWidget(null);
+          if (!this.classList.contains("active")) {
+            setActiveWidget("distance");
+          } else {
+            setActiveButton(null);
+          }
+        });
+
+      document
+        .getElementById("areaButton")
+        .addEventListener("click", function () {
+          setActiveWidget(null);
+          if (!this.classList.contains("active")) {
+            setActiveWidget("area");
+          } else {
+            setActiveButton(null);
+          }
+        });
+
+      function setActiveWidget(type) {
+        switch (type) {
+          case "distance":
+            activeWidget = new DirectLineMeasurement3D({
+              view: view
+            });
+
+            // skip the initial 'new measurement' button
+            activeWidget.viewModel.newMeasurement();
+
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("distanceButton"));
+            break;
+          case "area":
+            activeWidget = new AreaMeasurement3D({
+              view: view
+            });
+
+            // skip the initial 'new measurement' button
+            activeWidget.viewModel.newMeasurement();
+
+            view.ui.add(activeWidget, "top-right");
+            setActiveButton(document.getElementById("areaButton"));
+            break;
+          case null:
+            if (activeWidget) {
+              view.ui.remove(activeWidget);
+              activeWidget.destroy();
+              activeWidget = null;
+            }
+            break;
+        }
+      }
+
+      function setActiveButton(selectedButton) {
+        // focus the view to activate keyboard shortcuts for sketching
+        view.focus();
+        var elements = document.getElementsByClassName("active");
+        for (var i = 0; i < elements.length; i++) {
+          elements[i].classList.remove("active");
+        }
+        if (selectedButton) {
+          selectedButton.classList.add("active");
+        }
+      }
+
+      view.on("click", function (evt) {
+        console.log(Vue.prototype);
+        view.hitTest(evt).then(function (response) {
+          var result = response.results[0];
+          console.log(evt);
+          console.log(response);
+          // debugger
+          if (result && result.graphic) {
+            var graphic = result.graphic;
+            doGl(graphic.attributes.CODE);
+          }
+        })
+      });
+    });
+  </script> -->
+</head>
+
+<body>
+  <div id="app">
+    <!-- 测距工具栏  -->
+    <div id="topbar">
+      <button class="action-button esri-icon-minus" id="distanceButton" type="button"
+        title="Measure distance between two points"></button>
+      <button class="action-button esri-icon-polygon" id="areaButton" type="button" title="Measure area"></button>
+    </div>
+
+    <!-- 左上查询 -->
+    <div id="left-slider">
+      <button id="showSiler">显示</button>
+      <fieldset class="layui-elem-field layui-field-title" style="margin-top: 20px;">
+        <legend>Gis地图查询筛选</legend>
+      </fieldset>
+      <div class="layui-form">
+
+        <div class="layui-form-item">
+          <label class="layui-form-label">实物分类</label>
+          <div class="layui-input-block">
+            <select name="" id="">
+              <option value='01'>农村</option>
+            </select>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">区域</label>
+          <div class="layui-input-block">
+            <input type="text" id="treeInput" class="layui-input">
+            <div id="xtree" class="none"></div>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">是否计划</label>
+          <div class="layui-input-block">
+            <select name="" id="">
+              <option value='0'>全部</option>
+              <option value='1'>计划</option>
+              <option value='2'>实际</option>
+            </select>
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <label class="layui-form-label">征地状态</label>
+          <div class="layui-input-block">
+            <input type="checkbox" name="like1[write]" lay-skin="primary" title="未征">
+            <input type="checkbox" name="like1[read]" lay-skin="primary" title="已征">
+            <input type="checkbox" name="like1[game]" lay-skin="primary" title="还地">
+          </div>
+        </div>
+        <div class="layui-form-item">
+          <div class="layui-input-block">
+            <button class="layui-btn layui-btn-normal layui-btn-sm">立即提交</button>
+          </div>
+        </div>
+      </div>
+
+
+
+
+    </div>
+
+  </div>
+  <script src="./js/main.js"></script>
+</body>
+
+</html>
