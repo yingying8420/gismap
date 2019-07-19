@@ -5,7 +5,8 @@ var vm = new Vue({
   el: '#app',
   data() {
     return {
-      baseURL: 'http://192.168.18.247:8080/bsirrigationlandacquisition-backend/fweb-security/',
+      // baseURL: 'http://192.168.18.247:8080/bsirrigationlandacquisition-backend/fweb-security/',
+      baseURL: 'http://192.168.18.221:8080/fweb-security/fweb-security/',
       showButton: true,
       showSlider: false,
       // 查询筛选字段
@@ -22,7 +23,19 @@ var vm = new Vue({
         label: "areaName",
         value: ""
       },
-      ownerShow: true
+      ownerShow: true,
+      landCheckList: ['1', '0'],
+      houseCheckList: ['1', '0'],
+      fenceCheckList: ['1', '0'],
+      graveCheckList: ['1', '0'],
+      independentCheckList: ['1', '0'],
+      resultTableData: [],
+      showBottomTableResult: false,
+      thisName: 'first',
+      searchFWResult: [],
+      jhTableData: [],
+      showTableButton: true,
+      landInfoData: []
     }
   },
   methods: {
@@ -36,6 +49,7 @@ var vm = new Vue({
       this.showSlider = true
       this.showButton = false
     },
+
     // 区域树节点点击取值
     treenodeclick(node) {
       this.gisSearchData.areaName = node.areaName
@@ -96,14 +110,14 @@ var vm = new Vue({
           data: {
             isPlanAct: this.gisSearchData.isPlanAct,
             areaId: this.gisSearchData.areaId,
-            // ids: "10",
-            // acType: this.landjhdata.acType,
             ownerId: this.gisSearchData.ownerId,
             processStatus: this.gisSearchData.processStatus
           }
         })
         .then((res) => {
           console.log(res.data.result);
+          this.showBottomTableResult = true
+          this.resultTableData = res.data.result.data_
         }).catch((err) => {
           console.error(err);
         });
@@ -113,7 +127,32 @@ var vm = new Vue({
       this.$refs[form].resetFields();
       this.gisSearchData.areaName = ''
       this.gisSearchData.areaId = ''
-    }
+    },
+    // 收起右下查询结果表格
+    hideBottomTableResult() {
+      this.showBottomTableResult = false
+      this.showTableButton = true
+    },
+    // 显示右下查询结果表格
+    handleChangeTableBtn() {
+      this.showTableButton = false
+      this.showBottomTableResult = true
+    },
+    // 单选土地查询结果
+    thisLandRowsChange(currentRow, oldRow) {
+      this.showLandInfoTableResult = true
+      this.landInfoData = currentRow
+      console.log(this.landInfoData.isPlanAct);
+      console.log(this.landInfoData.category);
+      console.log(this.landInfoData.mapCode);
+      doGl(this.landInfoData.isPlanAct, 'td', this.landInfoData.category, this.landInfoData.mapCode)
+    },
+    // 图例（土地）
+    handleTDCheck(val) {
+      console.log(val);
+      console.log(layervisible());
+      
+    },
   },
   mounted() {
     this.loadAreaData()

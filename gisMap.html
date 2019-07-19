@@ -5,325 +5,17 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>Gis地图查询</title>
+  <link rel="stylesheet" href="http://192.168.1.145:8686/arcgis_js_api/library/4.11/esri/themes/light/main.css" />
   <link rel="stylesheet" href="./css/index.css">
   <link rel="stylesheet" href="./css/animate.css">
   <link rel="stylesheet" href="./css/gismap.css">
-  <!-- <link rel="stylesheet" href="./arcgis_js_api/library/4.11/esri/themes/light/main.css" /> -->
 
-  <!-- 引入样式 -->
-
-  <style>
-    html,
-    body,
-    #app {
-      padding: 0;
-      margin: 0;
-      height: 100%;
-      width: 100%;
-      background: rgb(0, 95, 150);
-    }
-
-    /* #topbar {
-      background: #fff;
-      padding: 10px;
-    } */
-
-    /* .action-button {
-      font-size: 16px;
-      background-color: transparent;
-      border: 1px solid #d3d3d3;
-      color: #6e6e6e;
-      height: 32px;
-      width: 32px;
-      text-align: center;
-      box-shadow: 0 0 1px rgba(0, 0, 0, 0.3);
-    } */
-
-    /* .action-button:hover,
-    .action-button:focus {
-      background: #636363;
-      color: #e4e4e4;
-    } */
-
-    /* .active {
-      background: #636363;
-      color: #e4e4e4;
-    } */
-  </style>
   <script src="./js/vue.js"></script>
   <script src="./js/index.js"></script>
   <script src="./js/axios.min.js"></script>
-  <!-- <script src="./arcgis_js_api/library/4.11/init.js"></script> -->
+  <script src="http://192.168.1.145:8686/arcgis_js_api/library/4.11/init.js"></script>
+  <script src="./js/map.js"></script>
 
-  <!-- <script>
-    var doQuery;
-    var doGl;
-    require([
-      "esri/Map",
-      "src/TiandiImageLayer",
-      "src/TiandiImageAnnoLayer",
-      "esri/views/SceneView",
-      "esri/layers/MapImageLayer",
-      "esri/layers/IntegratedMeshLayer",
-      "esri/layers/GraphicsLayer",
-      "esri/tasks/QueryTask",
-      "esri/tasks/support/Query",
-      "esri/widgets/DirectLineMeasurement3D",
-      "esri/widgets/AreaMeasurement3D"
-    ], function (
-      Map, TiandiImageLayer, TiandiImageAnnoLayer, SceneView, MapImageLayer, IntegratedMeshLayer, GraphicsLayer,
-      QueryTask, Query, DirectLineMeasurement3D, AreaMeasurement3D
-    ) {
-      var queryResult = {};
-      //新建影像图层
-      var TiandiImageLayer = new TiandiImageLayer();
-      //新建标注图层
-      var TiandiImageAnnoLayer = new TiandiImageAnnoLayer();
-
-      var layer = new MapImageLayer({
-        url: "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer"
-      });
-
-      /*permitsLayer，这个是这个链接：https://gis.gwpdi.com:6443/arcgis/rest/services/BaiGuan_TestTif/MapServer即那个项目区带状底图影像*/
-      var permitsLayer = new MapImageLayer({
-        url: "https://gis.gwpdi.com:6443/arcgis/rest/services/BaiGuan_TestTif/MapServer"
-      });
-      /*meshlayer，这个是这个链接：https://gis.gwpdi.com:6443/arcgis/rest/services/Hosted/fuba/SceneServer就是那个无人机三维模型*/
-      var meshlayer = new IntegratedMeshLayer({
-        url: "https://gis.gwpdi.com:6443/arcgis/rest/services/Hosted/fuba/SceneServer"
-      });
-
-      var activeWidget = null;
-
-      var resultsLayer = new GraphicsLayer();
-
-      var map = new Map({
-        layers: [TiandiImageLayer, TiandiImageAnnoLayer, permitsLayer, layer, meshlayer, resultsLayer],
-        ground: "world-elevation"
-      });
-
-      var view = new SceneView({
-        container: "app",
-        map: map,
-        center: [106.539749, 23.923348],
-        zoom: 14,
-        popup: {
-          dockEnabled: true,
-          dockOptions: {
-            position: "top-right",
-            breakpoint: false
-          }
-        }
-      });
-
-      // add the toolbar for the measurement widgets
-      view.ui.add("topbar", "top-right");
-      view.ui.move(['zoom', 'navigation-toggle', 'compass'], 'bottom-right');
-
-      view.when(function () {
-        view.ui.add("optionsDiv", "bottom-left");
-        document.getElementById("doGlBtn").addEventListener("click", doGl);
-      });
-
-      var peaksUrl_DLTB =
-        "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer/14";
-      var peaksUrl_FW =
-        "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer/12";
-      var peaksUrl_FS_D =
-        "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer/0";
-      var peaksUrl_FS_X =
-        "https://gis.gwpdi.com:6443/arcgis/rest/services/Plan/BG_Service/MapServer/3";
-      var qTask;
-
-      var params = new Query({
-        returnGeometry: true,
-        outFields: ["*"]
-      });
-
-      var highlightSelect;
-      /*
-        单击一条数据高亮
-        glCode:点击数据的mapCode
-      */
-      doGl = function (glCode) {
-        if (highlightSelect) {
-          highlightSelect.remove();
-        }
-
-        // the feature to be highlighted
-        var feature = queryResult[glCode];
-
-        // use the objectID to highlight the feature
-        view.whenLayerView(resultsLayer).then(function (layerView) {
-          highlightSelect = layerView.highlight(
-            feature
-          );
-        });
-
-        // center the feature
-        view.goTo({
-          target: feature.geometry,
-        });
-      }
-
-      /*
-        地图查询方法
-        fType:tab页签类型td(土地),fw(房屋),fs(附属)
-        sType:附属类型category字段,
-        queryStr:地图查询CODE集合，字符串'A','B','C'
-      */
-      doQuery = function (fType, sType, queryStr) {
-        // Clear the results from a previous query
-        resultsLayer.removeAll();
-        queryResult = {};
-        if (fType == "td") {
-          doQueryExt(peaksUrl_DLTB, queryStr);
-        } else if (fType == "fw") {
-          doQueryExt(peaksUrl_FW, queryStr);
-        } else {
-          doQueryExt(peaksUrl_FW, queryStr);
-          doQueryExt(peaksUrl_FS_X, queryStr);
-          doQueryExt(peaksUrl_FS_D, queryStr);
-        }
-      }
-
-      function doQueryExt(peaksUrl, queryStr) {
-        qTask = new QueryTask({
-          url: peaksUrl
-        });
-
-        params.where = "CODE IN (" + queryStr + ")";
-        // executes the query and calls getResults() once the promise is resolved
-        // promiseRejected() is called if the promise is rejected
-        qTask.execute(params)
-          .then(getResults)
-          .catch(promiseRejected);
-      }
-
-      var peakResults;
-      // Called each time the promise is resolved
-      function getResults(response) {
-
-        // Loop through each of the results and assign a symbol and PopupTemplate
-        // to each so they may be visualized on the map
-
-        peakResults = response.features.map(function (feature) {
-          feature.symbol = {
-            type: "simple-fill", // autocasts as new PointSymbol3D()
-            color: "#00FCFC",
-            outline: {
-              color: [128, 128, 128, 0.5],
-              width: "0.5px"
-            }
-          };
-          queryResult[feature.attributes.CODE] = feature;
-          //feature.popupTemplate = popupTemplate;
-          return feature;
-        });
-
-        resultsLayer.addMany(peakResults);
-        view.goTo(peakResults).then(function () {
-          /**view.popup.open({
-            features: peakResults,
-            featureMenuOpen: true,
-            updateLocationEnabled: true
-          });**/
-
-        });
-
-        // print the number of results returned to the user
-        // document.getElementById("printResults").innerHTML = "查询到" + peakResults.length +
-        //   "个记录！";
-      }
-
-      // Called each time the promise is rejected
-      function promiseRejected(error) {
-        console.error("错误信息: ", error.message);
-      }
-
-      document
-        .getElementById("distanceButton")
-        .addEventListener("click", function () {
-          setActiveWidget(null);
-          if (!this.classList.contains("active")) {
-            setActiveWidget("distance");
-          } else {
-            setActiveButton(null);
-          }
-        });
-
-      document
-        .getElementById("areaButton")
-        .addEventListener("click", function () {
-          setActiveWidget(null);
-          if (!this.classList.contains("active")) {
-            setActiveWidget("area");
-          } else {
-            setActiveButton(null);
-          }
-        });
-
-      function setActiveWidget(type) {
-        switch (type) {
-          case "distance":
-            activeWidget = new DirectLineMeasurement3D({
-              view: view
-            });
-
-            // skip the initial 'new measurement' button
-            activeWidget.viewModel.newMeasurement();
-
-            view.ui.add(activeWidget, "top-right");
-            setActiveButton(document.getElementById("distanceButton"));
-            break;
-          case "area":
-            activeWidget = new AreaMeasurement3D({
-              view: view
-            });
-
-            // skip the initial 'new measurement' button
-            activeWidget.viewModel.newMeasurement();
-
-            view.ui.add(activeWidget, "top-right");
-            setActiveButton(document.getElementById("areaButton"));
-            break;
-          case null:
-            if (activeWidget) {
-              view.ui.remove(activeWidget);
-              activeWidget.destroy();
-              activeWidget = null;
-            }
-            break;
-        }
-      }
-
-      function setActiveButton(selectedButton) {
-        // focus the view to activate keyboard shortcuts for sketching
-        view.focus();
-        var elements = document.getElementsByClassName("active");
-        for (var i = 0; i < elements.length; i++) {
-          elements[i].classList.remove("active");
-        }
-        if (selectedButton) {
-          selectedButton.classList.add("active");
-        }
-      }
-
-      view.on("click", function (evt) {
-        console.log(Vue.prototype);
-        view.hitTest(evt).then(function (response) {
-          var result = response.results[0];
-          console.log(evt);
-          console.log(response);
-          // debugger
-          if (result && result.graphic) {
-            var graphic = result.graphic;
-            doGl(graphic.attributes.CODE);
-          }
-        })
-      });
-    });
-  </script> -->
 </head>
 
 <body>
@@ -350,7 +42,6 @@
           <el-button icon="el-icon-back" size="mini" circle type="primary" class="back-to-hide" title="收起"
             @click="handleHideBtn"></el-button>
         </div>
-        <!-- 表单查询 -->
         <span class="form-title">Gis地图查询</span>
         <el-form :model="gisSearchData" ref="gisSearchData" label-width="80px" size="mini">
           <el-form-item label="实物分类" prop="thingsType">
@@ -398,6 +89,128 @@
       </div>
     </transition>
 
+    <!-- 右边栏（类图例） -->
+    <el-card class="box-card">
+      <span>图斑图例查询</span>
+      <el-form>
+        <el-form-item label="土地" style="margin-bottom: 0px;">
+          <el-checkbox-group @change="handleTDCheck" v-model="landCheckList">
+            <el-checkbox label="1">计划</el-checkbox>
+            <el-checkbox label="0">实际</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="房屋及附属设施" style="margin-bottom: 0px;">
+          <el-checkbox-group @change="handleHouseCheck" v-model="houseCheckList">
+            <el-checkbox label="1">计划</el-checkbox>
+            <el-checkbox label="0">实际</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="围墙" style="margin-bottom: 0px;">
+          <el-checkbox-group @change="handleWQCheck" v-model="fenceCheckList">
+            <el-checkbox label="1">计划</el-checkbox>
+            <el-checkbox label="0">实际</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="坟墓" style="margin-bottom: 0px;">
+          <el-checkbox-group @change="handleMMMMCheck" v-model="graveCheckList">
+            <el-checkbox label="1">计划</el-checkbox>
+            <el-checkbox label="0">实际</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+        <el-form-item label="独立地物" style="margin-bottom: 0px;">
+          <el-checkbox-group @change="handleDLDWCheck" v-model="independentCheckList">
+            <el-checkbox label="1">计划</el-checkbox>
+            <el-checkbox label="0">实际</el-checkbox>
+          </el-checkbox-group>
+        </el-form-item>
+      </el-form>
+    </el-card>
+
+    <!-- 点击图斑弹出层 -->
+    <div class="mapLayer">
+      
+    </div>
+
+    <!-- 右下按钮 -->
+    <transition name="hide-button" enter-active-class="animated fadeInLeft faster"
+      leave-active-class="animated fadeOutLeft faster">
+      <el-button type="primary" size="mini" type="primary" @click="handleChangeTableBtn" class="change-table-button"
+        v-if="showTableButton" icon="el-icon-search">查询结果表格</el-button>
+    </transition>
+
+    <!-- 右下表格弹出 -->
+    <transition name="custom-classes-transition" enter-active-class="animated fadeInRight faster"
+      leave-active-class="animated fadeOutRight faster">
+      <div class="bottom-table" v-if="showBottomTableResult">
+        <div style="position: absolute;top: 0;right: 0;z-index: 2;">
+          <el-button icon="el-icon-right" size="mini" circle type="primary" class="back-to-hide" title="收起"
+            @click="hideBottomTableResult"></el-button>
+        </div>
+        <div class="bottom-table-slider">
+          <div style="padding: 5px;">
+            <el-tabs v-model="thisName">
+              <!-- 土地表格 -->
+              <el-tab-pane label="土地" name="first">
+                <el-table ref="landJhTable" :data="resultTableData" border size="mini" max-height="300px" height="240"
+                  highlight-current-row @current-change="thisLandRowsChange" style="width: 100%;">
+                  <el-table-column type="index" width="46" fixed></el-table-column>
+                  <el-table-column prop="landCode" width="100" label="土地编码" fixed></el-table-column>
+                  <el-table-column prop="landName" width="100" label="土地名称" fixed></el-table-column>
+                  <el-table-column prop="startStationNumberId" width="100" label="起点桩号"></el-table-column>
+                  <el-table-column prop="endStationNumberId" width="100" label="终点桩号"></el-table-column>
+                  <el-table-column prop="constructionPlanId" width="100" label="施工配套用地"></el-table-column>
+                  <el-table-column prop="measureArea" width="110" label="丈量面积（㎡）"></el-table-column>
+                  <el-table-column prop="ownerName" width="100" label="所属产权人"></el-table-column>
+                  <el-table-column prop="mapArea" width="120" label="图斑面积（计划）"></el-table-column>
+                  <el-table-column prop="acTypeName" width="100" label="用地性质"></el-table-column>
+                </el-table>
+              </el-tab-pane>
+              <!-- 房屋表格 -->
+              <el-tab-pane label="房屋" name="second">
+                <el-table ref="fwTable" :data="searchFWResult" border size="mini" height="180" highlight-current-row
+                  >
+                  <el-table-column type="index" width="36"></el-table-column>
+                  <el-table-column prop="houseNumber" label="门牌号">
+                  </el-table-column>
+                  <el-table-column prop="natureTypeName" label="用地性质（产别）">
+                  </el-table-column>
+                  <el-table-column prop="categoryName" label="房屋类别">
+                  </el-table-column>
+                  <el-table-column prop="homesteadArea" label="宅基地面积（㎡）">
+                  </el-table-column>
+                  <el-table-column prop="buildingArea" label="建筑面积（㎡）">
+                  </el-table-column>
+                  <el-table-column prop="measuringArea" label="丈量面积（㎡）">
+                  </el-table-column>
+                  <el-table-column prop="structureTypeName" label="房屋结构">
+                  </el-table-column>
+                  <el-table-column prop="layerNumber" label="层数">
+                  </el-table-column>
+                </el-table>
+              </el-tab-pane>
+              <!-- 附属设施表格 -->
+              <el-tab-pane label="附属设施" name="third">
+                <el-table :data="searchFWResult" border size="mini" height="180" highlight-current-row
+                  >
+                  <el-table-column type="index" width="36"></el-table-column>
+                  <el-table-column prop="tudiNum" label="设施名称">
+                  </el-table-column>
+                  <el-table-column prop="tudiNum" label="项目/设施类别">
+                  </el-table-column>
+                  <el-table-column prop="startNum" label="设施材质">
+                  </el-table-column>
+                  <el-table-column prop="endNum" label="设施规模">
+                  </el-table-column>
+                  <el-table-column prop="sgptyd" label="测量值">
+                  </el-table-column>
+                </el-table>
+              </el-tab-pane>
+            </el-tabs>
+          </div>
+
+        </div>
+      </div>
+    </transition>
 
   </div>
   <script src="./js/main.js"></script>
