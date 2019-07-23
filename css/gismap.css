@@ -88,8 +88,8 @@ body,
   display: none;
 }
 .bottom-table{
-  width: 800px;
-  height: 360px;
+  width: 850px;
+  height: 460px;
   position: fixed;
   background: #ffffff;
   bottom: 10px;
@@ -101,6 +101,6 @@ body,
 
 .change-table-button{
   position: absolute;
-  top: 300px;
+  top: 350px;
   right: 10px;
 }

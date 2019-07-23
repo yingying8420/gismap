@@ -61,7 +61,7 @@
           </el-form-item>
 
           <el-form-item label="是否计划" prop="isPlanAct">
-            <el-select v-model="gisSearchData.isPlanAct" style="width: 250px;" @change="handleChangePlan">
+            <el-select v-model="gisSearchData.isPlanAct" style="width: 250px;">
               <el-option label="请选择" value=""></el-option>
               <el-option label="计划" value="1"></el-option>
               <el-option label="实际" value="0"></el-option>
@@ -69,7 +69,10 @@
           </el-form-item>
 
           <el-form-item label="产权人" prop="ownerId" v-if="ownerShow">
-            <el-input v-model="gisSearchData.ownerId" placeholder="请填写产权人" size="mini" style="width: 250px;"></el-input>
+            <el-select v-model="thisOwnerId" size="mini" style="width: 250px;" @change="handleOwnerId">
+              <el-option v-for="item in thisOwnerData" :key="item.id" :label="item.ownerName" :value="item.id">
+              </el-option>
+            </el-select>
           </el-form-item>
 
           <el-form-item label="征地状态" prop="processStatus">
@@ -82,7 +85,7 @@
           </el-form-item>
 
           <el-form-item>
-            <el-button type="primary" @click="searchForm('gisSearchData')" size="mini">查 询</el-button>
+            <el-button type="primary" @click="searchForm('gisSearchData')" size="mini" :loading="false">查 询</el-button>
             <el-button @click="resetForm('gisSearchData')" size="mini">重 置</el-button>
           </el-form-item>
         </el-form>
@@ -128,14 +131,14 @@
 
     <!-- 点击图斑弹出层 -->
     <div class="mapLayer">
-      
+
     </div>
 
     <!-- 右下按钮 -->
-    <transition name="hide-button" enter-active-class="animated fadeInLeft faster"
-      leave-active-class="animated fadeOutLeft faster">
+    <transition name="hide-button" enter-active-class="animated fadeInRight faster"
+      leave-active-class="animated fadeOutRight faster">
       <el-button type="primary" size="mini" type="primary" @click="handleChangeTableBtn" class="change-table-button"
-        v-if="showTableButton" icon="el-icon-search">查询结果表格</el-button>
+        v-if="showTableButton" icon="el-icon-search">查询结果</el-button>
     </transition>
 
     <!-- 右下表格弹出 -->
@@ -149,13 +152,31 @@
         <div class="bottom-table-slider">
           <div style="padding: 5px;">
             <el-tabs v-model="thisName">
-              <!-- 土地表格 -->
+              
               <el-tab-pane label="土地" name="first">
-                <el-table ref="landJhTable" :data="resultTableData" border size="mini" max-height="300px" height="240"
-                  highlight-current-row @current-change="thisLandRowsChange" style="width: 100%;">
-                  <el-table-column type="index" width="46" fixed></el-table-column>
-                  <el-table-column prop="landCode" width="100" label="土地编码" fixed></el-table-column>
-                  <el-table-column prop="landName" width="100" label="土地名称" fixed></el-table-column>
+                <el-form :inline="true" :model="landTableSearch">
+                  <el-form-item label="地类" prop="id">
+                    <el-select v-model="landTableSearch.name" placeholder="请选择地类" size="mini">
+                      <el-option :value="landTableSearch.id" style="padding: 0;overflow: auto;height: 200px;">
+                        <el-tree id="landtree" ref="tree" :data="landTypeTree" :props="landTreeProps" node-key="id"
+                          :expand-on-click-node="false" @node-click="landTreeNodeclick">
+                      </el-option>
+                      </el-tree>
+                    </el-select>
+                  </el-form-item>
+                  <el-form-item label="用地性质">
+                    <el-select v-model="landTableSearch.landUse" multiple placeholder="请选择性质" size="mini">
+                      <el-option value="1">临时</el-option>
+                      <el-option value="2">永久</el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-form>
+                <!-- 土地表格 -->
+                <el-table ref="landJhTable" :data="resultTableData" border size="mini" height="340" row-key="id" lazy
+                  highlight-current-row @current-change="thisLandRowsChange" style="width: 100%;" :tree-props="{children: 'children', hasChildren: 'hasChildren'}" :load="load" v-loading="isLoading">
+                  <el-table-column type="index" width="46"></el-table-column>
+                  <el-table-column prop="landCode" width="100" label="土地编码"></el-table-column>
+                  <el-table-column prop="landName" width="100" label="土地名称"></el-table-column>
                   <el-table-column prop="startStationNumberId" width="100" label="起点桩号"></el-table-column>
                   <el-table-column prop="endStationNumberId" width="100" label="终点桩号"></el-table-column>
                   <el-table-column prop="constructionPlanId" width="100" label="施工配套用地"></el-table-column>
@@ -167,8 +188,7 @@
               </el-tab-pane>
               <!-- 房屋表格 -->
               <el-tab-pane label="房屋" name="second">
-                <el-table ref="fwTable" :data="searchFWResult" border size="mini" height="180" highlight-current-row
-                  >
+                <el-table ref="fwTable" :data="searchFWResult" border size="mini" height="180" highlight-current-row>
                   <el-table-column type="index" width="36"></el-table-column>
                   <el-table-column prop="houseNumber" label="门牌号">
                   </el-table-column>
@@ -188,10 +208,41 @@
                   </el-table-column>
                 </el-table>
               </el-tab-pane>
-              <!-- 附属设施表格 -->
-              <el-tab-pane label="附属设施" name="third">
-                <el-table :data="searchFWResult" border size="mini" height="180" highlight-current-row
-                  >
+              <!-- 围墙表格 -->
+              <el-tab-pane label="房屋附属" name="third">
+                <el-table :data="searchFWFSResult" border size="mini" height="180" highlight-current-row>
+                  <el-table-column type="index" width="36"></el-table-column>
+                  <el-table-column prop="tudiNum" label="设施名称">
+                  </el-table-column>
+                  <el-table-column prop="tudiNum" label="项目/设施类别">
+                  </el-table-column>
+                  <el-table-column prop="startNum" label="设施材质">
+                  </el-table-column>
+                  <el-table-column prop="endNum" label="设施规模">
+                  </el-table-column>
+                  <el-table-column prop="sgptyd" label="测量值">
+                  </el-table-column>
+                </el-table>
+              </el-tab-pane>
+              <!-- 坟墓表格 -->
+              <el-tab-pane label="果木" name="fourth">
+                <el-table :data="searchGMResult" border size="mini" height="180" highlight-current-row>
+                  <el-table-column type="index" width="36"></el-table-column>
+                  <el-table-column prop="tudiNum" label="设施名称">
+                  </el-table-column>
+                  <el-table-column prop="tudiNum" label="项目/设施类别">
+                  </el-table-column>
+                  <el-table-column prop="startNum" label="设施材质">
+                  </el-table-column>
+                  <el-table-column prop="endNum" label="设施规模">
+                  </el-table-column>
+                  <el-table-column prop="sgptyd" label="测量值">
+                  </el-table-column>
+                </el-table>
+              </el-tab-pane>
+              <!-- 独立地物表格 -->
+              <el-tab-pane label="坟墓" name="fifth">
+                <el-table :data="searchFMResult" border size="mini" height="180" highlight-current-row>
                   <el-table-column type="index" width="36"></el-table-column>
                   <el-table-column prop="tudiNum" label="设施名称">
                   </el-table-column>
