@@ -34,17 +34,21 @@ var vm = new Vue({
       fenceCheckList: ['1', '0'],
       graveCheckList: ['1', '0'],
       independentCheckList: ['1', '0'],
-      resultTableData: [],
+      resultLandData: [],
+      resultHouseData: [],
+      resultFSSSData: [],
+      resultLessTreeData: [],
+      resultGraveData: [],
       childLandInfoData: [],
       showBottomTableResult: false,
       thisName: 'first',
-      searchFWResult: [],
-      searchFWFSResult: [],
-      searchGMResult: [],
-      searchFMResult: [],
       jhTableData: [],
       showTableButton: true,
       landInfoData: [],
+      houseInfoData: [],
+      fsssInfoData: [],
+      lessTreeInfoData: [],
+      graveInfoData: [],
       landTableSearch: {
         id: '',
         name: '',
@@ -63,10 +67,10 @@ var vm = new Vue({
   watch: {
     // 监听计划和实际的切换
     gisSearchData: {
-      handler(newVal, oldval){
+      handler(newVal, oldval) {
         // console.log(newVal);
-        if(newVal.isPlanAct) {
-          if(newVal.isPlanAct == 1){
+        if (newVal.isPlanAct) {
+          if (newVal.isPlanAct == 1) {
             this.ownerShow = false
             this.thisOwnerId = ""
           } else {
@@ -156,14 +160,11 @@ var vm = new Vue({
       console.log(e);
       this.gisSearchData.processStatus = e
     },
-    // 点击查询
-    searchForm() {
-      this.loading = true
-      this.isLoading = true
-      // var thisData = this.gisSearchData
+    // 土地筛选接口
+    getLandRes() {
       axios({
         method: 'post',
-        url: this.baseURL + '/LandInfo/info/pages?page=1&rows=999',
+        url: this.baseURL + 'LandInfo/info/pages?page=1&rows=9999',
         data: {
           isPlanAct: this.gisSearchData.isPlanAct,
           areaId: this.gisSearchData.areaId,
@@ -172,28 +173,131 @@ var vm = new Vue({
         }
       }).then((res) => {
         if (res.data != "" && res.data != undefined && res.data.statusCode == "200") {
-          console.log(res.data.result)
+          // console.log(res.data.result)
           this.showBottomTableResult = true
           this.isLoading = false
           this.loading = false
-          this.resultTableData = res.data.result.data_
-          this.resultTableData.forEach(ele => {
-            ele.startStationNumberId = ele.startStationNumberId+"+000"
-            ele.endStationNumberId = ele.endStationNumberId+"+000"
-          });
+          this.resultLandData = res.data.result.data_
+          // this.resultLandData.forEach(ele => {
+          //   ele.startStationNumberId = ele.startStationNumberId + "+000"
+          //   ele.endStationNumberId = ele.endStationNumberId + "+000"
+          // });
         } else {
           this.isLoading = false
           this.loading = false
+          this.resultLandData = []
         }
       }).catch((err) => {
         console.error(err)
       })
     },
+    // 房屋筛选接口
+    getHouseRes() {
+      axios({
+        method: 'post',
+        url: this.baseURL + 'HouseInfo/info/pages?page=1&rows=9999',
+        data: {
+          isPlanAct: this.gisSearchData.isPlanAct,
+          areaId: this.gisSearchData.areaId,
+          ownerId: this.thisOwnerId,
+          processStatus: this.gisSearchData.processStatus
+        }
+      }).then((res) => {
+        // console.log(res.data.result.data_);
+        if (res.data != "" && res.data != undefined && res.data.statusCode == "200") {
+          // console.log('House !!!');
+          this.resultHouseData = res.data.result.data_
+        } else {
+          this.resultHouseData = []
+        }
+      }).catch((err) => {
+        console.error(err);
+      });
+    },
+    // 附属设施筛选接口
+    getFSSSRes() {
+      axios({
+        method: 'post',
+        url: this.baseURL + 'LandAffiliatedInfo/info/pages?page=1&rows=9999',
+        data: {
+          isPlanAct: this.gisSearchData.isPlanAct,
+          areaId: this.gisSearchData.areaId,
+          ownerId: this.thisOwnerId,
+          processStatus: this.gisSearchData.processStatus
+        }
+      }).then((res) => {
+        // console.log(res.data.result.data_);
+        if (res.data != "" && res.data != undefined && res.data.statusCode == "200") {
+          // console.log('House !!!');
+          this.resultFSSSData = res.data.result.data_
+        } else {
+          this.resultFSSSData = []
+        }
+      }).catch((err) => {
+        console.error(err);
+      });
+    },
+    // 零星果木筛选接口
+    getLessTreeRes() {
+      axios({
+        method: 'post',
+        url: this.baseURL + 'SporadicFruitInfo/info/pages?page=1&rows=9999',
+        data: {
+          isPlanAct: this.gisSearchData.isPlanAct,
+          areaId: this.gisSearchData.areaId,
+          ownerId: this.thisOwnerId,
+          processStatus: this.gisSearchData.processStatus
+        }
+      }).then((res) => {
+        // console.log(res.data.result.data_);
+        if (res.data != "" && res.data != undefined && res.data.statusCode == "200") {
+          // console.log('House !!!');
+          this.resultLessTreeData = res.data.result.data_
+        } else {
+          this.resultLessTreeData = []
+        }
+      }).catch((err) => {
+        console.error(err);
+      });
+    },
+    // 坟墓选接口
+    getGraveRes() {
+      axios({
+        method: 'post',
+        url: this.baseURL + 'TombInfo/info/pages?page=1&rows=9999',
+        data: {
+          isPlanAct: this.gisSearchData.isPlanAct,
+          areaId: this.gisSearchData.areaId,
+          ownerId: this.thisOwnerId,
+          processStatus: this.gisSearchData.processStatus
+        }
+      }).then((res) => {
+        console.log(res.data.result.data_);
+        if (res.data != "" && res.data != undefined && res.data.statusCode == "200") {
+          // console.log('House !!!');
+          this.resultGraveData = res.data.result.data_
+        } else {
+          this.resultGraveData = []
+        }
+      }).catch((err) => {
+        console.error(err);
+      });
+    },
+    // 点击查询
+    searchForm() {
+      this.loading = true
+      this.isLoading = true
+      this.getLandRes()
+      this.getHouseRes()
+      this.getFSSSRes()
+      this.getLessTreeRes()
+      this.getGraveRes()
+    },
     //获得是否有子集
     load(tree, treeNode, resolve) {
       axios({
           method: "get",
-          url: this.baseURL + "/LandInfo/info/getLandInfoByPreEntityID",
+          url: this.baseURL + "LandInfo/info/getLandInfoByPreEntityID",
           params: {
             id: tree.id
           }
@@ -233,32 +337,120 @@ var vm = new Vue({
     thisLandRowsChange(currentRow, oldRow) {
       this.showLandInfoTableResult = true
       this.landInfoData = currentRow
-      console.log(this.landInfoData.isPlanAct);
-      console.log(this.landInfoData.category);
-      console.log(this.landInfoData.mapCode);
-      doGl(this.landInfoData.isPlanAct, 'td', this.landInfoData.category, this.landInfoData.mapCode)
+      // doGl(this.landInfoData.isPlanAct, 'td', this.landInfoData.category, this.landInfoData.mapCode)
     },
+    // 单选房屋查询结果
+    thisHouseRowsChange(currentRow, oldRow) {
+      this.showLandInfoTableResult = true
+      this.houseInfoData = currentRow
+      // doGl(this.houseInfoData.isPlanAct, 'td', this.houseInfoData.category, this.houseInfoData.mapCode)
+    },
+    // 单选附属设施查询结果
+    thisFSSSRowsChange(currentRow, oldRow) {
+      this.showLandInfoTableResult = true
+      this.fsssInfoData = currentRow
+      // doGl(this.houseInfoData.isPlanAct, 'td', this.houseInfoData.category, this.houseInfoData.mapCode)
+    },
+    // 单选零星果木查询结果
+    thisLessTreeRowsChange(currentRow, oldRow) {
+      this.showLandInfoTableResult = true
+      this.lessTreeInfoData = currentRow
+      // doGl(this.houseInfoData.isPlanAct, 'td', this.houseInfoData.category, this.houseInfoData.mapCode)
+    },
+    // 单选坟墓查询结果
+    thisGraveRowsChange(currentRow, oldRow) {
+      this.showLandInfoTableResult = true
+      this.graveInfoData = currentRow
+      // doGl(this.houseInfoData.isPlanAct, 'td', this.houseInfoData.category, this.houseInfoData.mapCode)
+    },
+
     // 图例（土地）
     handleTDCheck(val) {
-      console.log(val);
+      // console.log(val);
+      if (val == '1') {
+        layervisible('layer_plan_landclass', true)
+        layervisible('layer_actual_landclass', false)
+      } else if (val == '0') {
+        layervisible('layer_plan_landclass', false)
+        layervisible('layer_actual_landclass', true)
+      } else if (val == '') {
+        layervisible('layer_plan_landclass', false)
+        layervisible('layer_actual_landclass', false)
+      } else {
+        layervisible('layer_plan_landclass', true)
+        layervisible('layer_actual_landclass', true)
+      }
+
       // console.log(layervisible());
 
     },
     // 图例（房屋）
     handleHouseCheck(val) {
-      console.log(val);
+      // console.log(val);
+      if (val == '1') {
+        layervisible('layer_plan_building', true)
+        layervisible('layer_actual_building', false)
+      } else if (val == '0') {
+        layervisible('layer_plan_building', false)
+        layervisible('layer_actual_building', true)
+      } else if (val == '') {
+        layervisible('layer_plan_building', false)
+        layervisible('layer_actual_building', false)
+      } else {
+        layervisible('layer_plan_building', true)
+        layervisible('layer_actual_building', true)
+      }
     },
     // 图例（围墙）
     handleWQCheck(val) {
-      console.log(val);
+      // console.log(val);
+      if (val == '1') {
+        layervisible('layer_plan_wall', true)
+        layervisible('layer_actual_wall', false)
+      } else if (val == '0') {
+        layervisible('layer_plan_wall', false)
+        layervisible('layer_actual_wall', true)
+      } else if (val == '') {
+        layervisible('layer_plan_wall', false)
+        layervisible('layer_actual_wall', false)
+      } else {
+        layervisible('layer_plan_wall', true)
+        layervisible('layer_actual_wall', true)
+      }
     },
     // 图例（坟墓）
     handleMMMMCheck(val) {
-      console.log(val);
+      // console.log(val);
+      if (val == '1') {
+        layervisible('layer_plan_grave', true)
+        layervisible('layer_actual_grave', false)
+      } else if (val == '0') {
+        layervisible('layer_plan_grave', false)
+        layervisible('layer_actual_grave', true)
+      } else if (val == '') {
+        layervisible('layer_plan_grave', false)
+        layervisible('layer_actual_grave', false)
+      } else {
+        layervisible('layer_plan_grave', true)
+        layervisible('layer_actual_grave', true)
+      }
     },
     // 图例（独立地物）
     handleDLDWCheck(val) {
       console.log(val);
+      if (val == '1') {
+        layervisible('layer_plan_groundobjects', true)
+        layervisible('layer_actual_groundobjects', false)
+      } else if (val == '0') {
+        layervisible('layer_plan_groundobjects', false)
+        layervisible('layer_actual_groundobjects', true)
+      } else if (val == '') {
+        layervisible('layer_plan_groundobjects', false)
+        layervisible('layer_actual_groundobjects', false)
+      } else {
+        layervisible('layer_plan_groundobjects', true)
+        layervisible('layer_actual_groundobjects', true)
+      }
     },
     // 加载地类树接口
     getLandType() {
